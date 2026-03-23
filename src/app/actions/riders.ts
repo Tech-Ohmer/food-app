@@ -57,14 +57,35 @@ export async function markOrderDelivered(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const supabase = await createServiceClient()
-    const { error } = await supabase
+
+    const { error: updateError } = await supabase
       .from('orders')
-      .update({ status: 'delivered' })
+      .update({ status: 'delivered', updated_at: new Date().toISOString() })
       .eq('id', orderId)
-    if (error) throw error
+
+    if (updateError) {
+      console.error('markOrderDelivered DB error:', updateError)
+      return { success: false, error: updateError.message }
+    }
+
+    // Send delivery confirmation email (non-blocking)
+    supabase
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
+      .single()
+      .then(async ({ data: order }) => {
+        if (order) {
+          const { sendOrderStatusUpdateEmail } = await import('@/lib/email')
+          const { ORDER_STATUS_LABELS } = await import('@/types')
+          sendOrderStatusUpdateEmail(order as any, ORDER_STATUS_LABELS['delivered']).catch(console.error)
+        }
+      })
+      .catch(console.error)
+
     return { success: true }
-  } catch (err) {
+  } catch (err: any) {
     console.error('markOrderDelivered error:', err)
-    return { success: false, error: 'Failed to mark as delivered.' }
+    return { success: false, error: err?.message ?? 'Failed to mark as delivered.' }
   }
 }

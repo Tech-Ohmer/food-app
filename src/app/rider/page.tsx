@@ -15,6 +15,8 @@ export default function RiderPage() {
   const [loading, setLoading] = useState(true)
   const [sharing, setSharing] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [delivering, setDelivering] = useState(false)
+  const [delivered, setDelivered] = useState(false)
 
   useEffect(() => {
     async function loadRider() {
@@ -62,11 +64,22 @@ export default function RiderPage() {
   }, [rider])
 
   async function handleMarkDelivered() {
-    if (!currentOrder) return
-    const result = await markOrderDelivered(currentOrder.id)
-    if (result.success) {
-      setCurrentOrder(null)
-      setSharing(false)
+    if (!currentOrder || delivering) return
+    setDelivering(true)
+    setError(null)
+    try {
+      const result = await markOrderDelivered(currentOrder.id)
+      if (result.success) {
+        setDelivered(true)
+        setCurrentOrder(null)
+        setSharing(false)
+      } else {
+        setError(result.error ?? 'Failed to mark as delivered. Please try again.')
+      }
+    } catch (err: any) {
+      setError(err?.message ?? 'Something went wrong.')
+    } finally {
+      setDelivering(false)
     }
   }
 
@@ -86,7 +99,24 @@ export default function RiderPage() {
       </header>
 
       <div className="max-w-lg mx-auto px-4 py-6 space-y-5">
-        {!currentOrder ? (
+        {/* Error display */}
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+            {error}
+          </div>
+        )}
+
+        {/* Delivered success */}
+        {delivered && (
+          <div className="bg-white rounded-2xl shadow-sm p-10 text-center">
+            <div className="text-6xl mb-4">🎉</div>
+            <h2 className="text-2xl font-bold text-green-600 mb-2">Delivered!</h2>
+            <p className="text-gray-500">Order has been delivered successfully.</p>
+            <p className="text-orange-500 font-bold text-xl mt-4">₱ collected from customer ✓</p>
+          </div>
+        )}
+
+        {!delivered && !currentOrder ? (
           <div className="bg-white rounded-2xl shadow-sm p-10 text-center text-gray-400">
             <div className="text-5xl mb-4">🛵</div>
             <p className="text-lg font-medium">No active delivery</p>
@@ -156,9 +186,10 @@ export default function RiderPage() {
             {/* Mark delivered */}
             <button
               onClick={handleMarkDelivered}
-              className="w-full bg-green-500 hover:bg-green-600 text-white py-4 rounded-2xl font-bold text-lg shadow-sm"
+              disabled={delivering}
+              className="w-full bg-green-500 hover:bg-green-600 disabled:bg-green-300 disabled:cursor-not-allowed text-white py-4 rounded-2xl font-bold text-lg shadow-sm transition-colors"
             >
-              ✓ Mark as Delivered
+              {delivering ? 'Marking as delivered...' : '✓ Mark as Delivered'}
             </button>
           </>
         )}
