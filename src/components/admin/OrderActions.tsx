@@ -1,7 +1,6 @@
 'use client'
 
-import { useTransition } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import type { OrderStatus } from '@/types'
 import { updateOrderStatus } from '@/app/actions/orders'
 
@@ -22,40 +21,62 @@ export default function AdminOrderActions({
   orderId: string
   currentStatus: OrderStatus
 }) {
-  const router = useRouter()
-  const [isPending, startTransition] = useTransition()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [done, setDone] = useState(false)
 
   const nextAction = STATUS_ACTIONS[currentStatus]
 
-  function handleAction(status: OrderStatus) {
-    startTransition(async () => {
-      await updateOrderStatus(orderId, status)
-      router.refresh()
-    })
+  async function handleAction(status: OrderStatus) {
+    setLoading(true)
+    setError(null)
+    try {
+      const result = await updateOrderStatus(orderId, status)
+      if (!result.success) {
+        setError(result.error ?? 'Failed to update order.')
+        setLoading(false)
+        return
+      }
+      setDone(true)
+      // Full page reload to show updated status
+      window.location.reload()
+    } catch (err) {
+      setError('Something went wrong. Please try again.')
+      setLoading(false)
+    }
+  }
+
+  if (done) {
+    return <p className="text-sm text-green-600 mt-4 font-medium">✓ Status updated — refreshing...</p>
   }
 
   if (!nextAction && !REJECT_STATUSES.includes(currentStatus)) return null
 
   return (
-    <div className="flex gap-2 mt-4 flex-wrap">
-      {nextAction && (
-        <button
-          onClick={() => handleAction(nextAction.next)}
-          disabled={isPending}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60 ${nextAction.color}`}
-        >
-          {isPending ? 'Updating...' : nextAction.label}
-        </button>
+    <div className="mt-4 space-y-2">
+      {error && (
+        <p className="text-sm text-red-600 bg-red-50 border border-red-200 px-3 py-2 rounded-lg">{error}</p>
       )}
-      {REJECT_STATUSES.includes(currentStatus) && (
-        <button
-          onClick={() => handleAction('rejected')}
-          disabled={isPending}
-          className="px-4 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors disabled:opacity-60"
-        >
-          Reject
-        </button>
-      )}
+      <div className="flex gap-2 flex-wrap">
+        {nextAction && (
+          <button
+            onClick={() => handleAction(nextAction.next)}
+            disabled={loading}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-60 ${nextAction.color}`}
+          >
+            {loading ? 'Updating...' : nextAction.label}
+          </button>
+        )}
+        {REJECT_STATUSES.includes(currentStatus) && (
+          <button
+            onClick={() => handleAction('rejected')}
+            disabled={loading}
+            className="px-4 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-700 hover:bg-red-200 transition-colors disabled:opacity-60"
+          >
+            Reject
+          </button>
+        )}
+      </div>
     </div>
   )
 }
