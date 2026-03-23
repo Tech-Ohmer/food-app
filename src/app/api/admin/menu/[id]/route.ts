@@ -9,23 +9,7 @@ function getAdminClient() {
   )
 }
 
-// GET — fetch single restaurant
-export async function GET(
-  _request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  try {
-    const { id } = await params
-    const supabase = getAdminClient()
-    const { data, error } = await supabase.from('restaurants').select('*').eq('id', id).single()
-    if (error) return NextResponse.json({ error: error.message }, { status: 404 })
-    return NextResponse.json(data)
-  } catch (err: any) {
-    return NextResponse.json({ error: err?.message }, { status: 500 })
-  }
-}
-
-// PATCH — update restaurant (toggle active, open/closed, etc.)
+// PATCH — update menu item
 export async function PATCH(
   request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -34,10 +18,7 @@ export async function PATCH(
     const { id } = await params
     const body = await request.json()
     const supabase = getAdminClient()
-    const { error } = await supabase
-      .from('restaurants')
-      .update(body)
-      .eq('id', id)
+    const { error } = await supabase.from('menu_items').update(body).eq('id', id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ success: true })
   } catch (err: any) {
@@ -45,7 +26,7 @@ export async function PATCH(
   }
 }
 
-// DELETE — remove restaurant and its menu items
+// DELETE — remove menu item
 export async function DELETE(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -53,15 +34,8 @@ export async function DELETE(
   try {
     const { id } = await params
     const supabase = getAdminClient()
-
-    // Delete menu items first (cascade should handle it but being explicit)
-    await supabase.from('menu_items').delete().eq('restaurant_id', id)
-    await supabase.from('menu_categories').delete().eq('restaurant_id', id)
-
-    // Delete the restaurant
-    const { error } = await supabase.from('restaurants').delete().eq('id', id)
+    const { error } = await supabase.from('menu_items').delete().eq('id', id)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
     return NextResponse.json({ success: true })
   } catch (err: any) {
     return NextResponse.json({ error: err?.message ?? 'Failed to delete.' }, { status: 500 })

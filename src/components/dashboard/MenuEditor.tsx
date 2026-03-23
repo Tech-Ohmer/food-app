@@ -16,16 +16,12 @@ export default function DashboardMenuEditor({
 }) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
-  const [showAddItem, setShowAddItem] = useState(false)
-  const [newItem, setNewItem] = useState({
-    name: '',
-    description: '',
-    price: '',
-    category_id: '',
-    image_url: '',
-  })
+  const [showAdd, setShowAdd] = useState(false)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [newItem, setNewItem] = useState({ name: '', description: '', price: '', category_id: '', image_url: '' })
+  const [editItem, setEditItem] = useState({ name: '', description: '', price: '', category_id: '', image_url: '' })
 
-  async function handleAddItem(e: React.FormEvent) {
+  async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
     const supabase = (await import('@/lib/supabase/client')).createClient()
     await supabase.from('menu_items').insert({
@@ -37,53 +33,83 @@ export default function DashboardMenuEditor({
       image_url: newItem.image_url || null,
       is_available: true,
     })
-    setShowAddItem(false)
+    setShowAdd(false)
     setNewItem({ name: '', description: '', price: '', category_id: '', image_url: '' })
     startTransition(() => router.refresh())
   }
 
+  function startEdit(item: MenuItem) {
+    setEditingId(item.id)
+    setEditItem({
+      name: item.name,
+      description: item.description ?? '',
+      price: String(item.price),
+      category_id: item.category_id ?? '',
+      image_url: item.image_url ?? '',
+    })
+  }
+
+  async function handleUpdate(itemId: string) {
+    const res = await fetch(`/api/admin/menu/${itemId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: editItem.name,
+        description: editItem.description || null,
+        price: parseFloat(editItem.price),
+        category_id: editItem.category_id || null,
+        image_url: editItem.image_url || null,
+      }),
+    })
+    if (res.ok) {
+      setEditingId(null)
+      startTransition(() => router.refresh())
+    }
+  }
+
   async function handleToggle(itemId: string, isAvailable: boolean) {
-    const supabase = (await import('@/lib/supabase/client')).createClient()
-    await supabase.from('menu_items').update({ is_available: !isAvailable }).eq('id', itemId)
+    await fetch(`/api/admin/menu/${itemId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ is_available: !isAvailable }),
+    })
     startTransition(() => router.refresh())
   }
 
-  async function handleDelete(itemId: string) {
-    if (!confirm('Delete this item?')) return
-    const supabase = (await import('@/lib/supabase/client')).createClient()
-    await supabase.from('menu_items').delete().eq('id', itemId)
+  async function handleDelete(itemId: string, name: string) {
+    if (!confirm(`Delete "${name}" from the menu? This cannot be undone.`)) return
+    await fetch(`/api/admin/menu/${itemId}`, { method: 'DELETE' })
     startTransition(() => router.refresh())
   }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-5">
-        <p className="text-gray-500 text-sm">{items.length} items</p>
-        <button
-          onClick={() => setShowAddItem(!showAddItem)}
-          className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium"
-        >
+        <p className="text-gray-500 text-sm">{items.length} items in menu</p>
+        <button onClick={() => setShowAdd(!showAdd)}
+          className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium">
           + Add Item
         </button>
       </div>
 
-      {showAddItem && (
-        <form onSubmit={handleAddItem} className="bg-orange-50 border border-orange-200 rounded-2xl p-5 mb-5 space-y-3">
+      {/* Add form */}
+      {showAdd && (
+        <form onSubmit={handleAdd} className="bg-orange-50 border border-orange-200 rounded-2xl p-5 mb-5 space-y-3">
           <h3 className="font-bold text-gray-900">New Menu Item</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Name *</label>
-              <input required value={newItem.name} onChange={e => setNewItem({ ...newItem, name: e.target.value })}
+              <input required value={newItem.name} onChange={e => setNewItem({...newItem, name: e.target.value})}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Price (₱) *</label>
-              <input required type="number" min="0" step="0.01" value={newItem.price} onChange={e => setNewItem({ ...newItem, price: e.target.value })}
+              <input required type="number" min="0" step="0.01" value={newItem.price} onChange={e => setNewItem({...newItem, price: e.target.value})}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Category</label>
-              <select value={newItem.category_id} onChange={e => setNewItem({ ...newItem, category_id: e.target.value })}
+              <select value={newItem.category_id} onChange={e => setNewItem({...newItem, category_id: e.target.value})}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
                 <option value="">No category</option>
                 {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -91,22 +117,23 @@ export default function DashboardMenuEditor({
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Image URL</label>
-              <input value={newItem.image_url} onChange={e => setNewItem({ ...newItem, image_url: e.target.value })}
+              <input value={newItem.image_url} onChange={e => setNewItem({...newItem, image_url: e.target.value})}
                 placeholder="https://..." className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
-              <input value={newItem.description} onChange={e => setNewItem({ ...newItem, description: e.target.value })}
+              <input value={newItem.description} onChange={e => setNewItem({...newItem, description: e.target.value})}
                 className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
             </div>
           </div>
           <div className="flex gap-3">
             <button type="submit" disabled={isPending} className="bg-orange-500 text-white px-6 py-2 rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-60">Add</button>
-            <button type="button" onClick={() => setShowAddItem(false)} className="border border-gray-200 text-gray-600 px-6 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
+            <button type="button" onClick={() => setShowAdd(false)} className="border border-gray-200 text-gray-600 px-6 py-2 rounded-lg text-sm hover:bg-gray-50">Cancel</button>
           </div>
         </form>
       )}
 
+      {/* Items list */}
       {items.length === 0 ? (
         <div className="text-center py-16 text-gray-400 bg-white rounded-2xl border border-gray-100">
           <p>No items yet. Add your first menu item.</p>
@@ -114,21 +141,76 @@ export default function DashboardMenuEditor({
       ) : (
         <div className="space-y-3">
           {items.map(item => (
-            <div key={item.id} className={`bg-white rounded-xl border p-4 flex items-center gap-4 shadow-sm ${!item.is_available ? 'opacity-60 border-red-100' : 'border-gray-100'}`}>
-              {item.image_url && <img src={item.image_url} alt={item.name} className="w-14 h-14 rounded-lg object-cover" />}
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-gray-900">{item.name}</p>
-                {item.description && <p className="text-xs text-gray-400 truncate">{item.description}</p>}
-                <p className="text-orange-500 font-bold text-sm">{formatCurrency(item.price)}</p>
-              </div>
-              <div className="flex gap-2">
-                <button onClick={() => handleToggle(item.id, item.is_available)} disabled={isPending}
-                  className={`text-xs px-3 py-1.5 rounded-lg transition-colors ${item.is_available ? 'bg-red-100 text-red-700 hover:bg-red-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}>
-                  {item.is_available ? 'Disable' : 'Enable'}
-                </button>
-                <button onClick={() => handleDelete(item.id)} disabled={isPending}
-                  className="text-xs text-gray-300 hover:text-red-500 px-2">✕</button>
-              </div>
+            <div key={item.id} className={`bg-white rounded-xl border shadow-sm ${!item.is_available ? 'border-red-100 opacity-70' : 'border-gray-100'}`}>
+              {editingId === item.id ? (
+                /* Edit mode */
+                <div className="p-4 space-y-3">
+                  <h4 className="font-semibold text-gray-800 text-sm">Edit Item</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Name *</label>
+                      <input value={editItem.name} onChange={e => setEditItem({...editItem, name: e.target.value})}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Price (₱) *</label>
+                      <input type="number" min="0" step="0.01" value={editItem.price} onChange={e => setEditItem({...editItem, price: e.target.value})}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Category</label>
+                      <select value={editItem.category_id} onChange={e => setEditItem({...editItem, category_id: e.target.value})}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-400">
+                        <option value="">No category</option>
+                        {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs text-gray-500 mb-1">Image URL</label>
+                      <input value={editItem.image_url} onChange={e => setEditItem({...editItem, image_url: e.target.value})}
+                        placeholder="https://..." className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                    </div>
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs text-gray-500 mb-1">Description</label>
+                      <input value={editItem.description} onChange={e => setEditItem({...editItem, description: e.target.value})}
+                        className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <button onClick={() => handleUpdate(item.id)}
+                      className="bg-orange-500 hover:bg-orange-600 text-white px-4 py-1.5 rounded-lg text-xs font-medium">Save</button>
+                    <button onClick={() => setEditingId(null)}
+                      className="border border-gray-200 text-gray-600 px-4 py-1.5 rounded-lg text-xs hover:bg-gray-50">Cancel</button>
+                  </div>
+                </div>
+              ) : (
+                /* View mode */
+                <div className="p-4 flex items-center gap-4">
+                  {item.image_url && <img src={item.image_url} alt={item.name} className="w-14 h-14 rounded-lg object-cover shrink-0" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="font-semibold text-gray-900">{item.name}</p>
+                      {!item.is_available && <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded-full">Hidden</span>}
+                    </div>
+                    {item.description && <p className="text-xs text-gray-400 truncate">{item.description}</p>}
+                    <p className="text-sm font-bold text-orange-500 mt-0.5">{formatCurrency(item.price)}</p>
+                  </div>
+                  <div className="flex gap-2 shrink-0">
+                    <button onClick={() => handleToggle(item.id, item.is_available)} disabled={isPending}
+                      className={`text-xs px-3 py-1.5 rounded-lg transition-colors disabled:opacity-60 ${item.is_available ? 'bg-gray-100 text-gray-600 hover:bg-gray-200' : 'bg-green-100 text-green-700 hover:bg-green-200'}`}>
+                      {item.is_available ? 'Hide' : 'Show'}
+                    </button>
+                    <button onClick={() => startEdit(item)}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">
+                      Edit
+                    </button>
+                    <button onClick={() => handleDelete(item.id, item.name)} disabled={isPending}
+                      className="text-xs px-3 py-1.5 rounded-lg bg-red-100 text-red-700 hover:bg-red-200 transition-colors disabled:opacity-60">
+                      Delete
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           ))}
         </div>

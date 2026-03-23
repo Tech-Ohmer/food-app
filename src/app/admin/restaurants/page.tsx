@@ -78,11 +78,17 @@ export default function AdminRestaurantsPage() {
                 <div className="text-xs text-gray-400 mt-0.5">{r.owner_email} · {r.address}</div>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-2 shrink-0 flex-wrap">
                 {/* Open/Closed badge */}
                 <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${r.is_open ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
                   {r.is_open ? 'Open' : 'Closed'}
                 </span>
+
+                {/* Edit */}
+                <Link href={`/admin/restaurants/${r.id}/edit`}
+                  className="text-xs px-3 py-1.5 rounded-lg bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors">
+                  Edit
+                </Link>
 
                 {/* Activate/Deactivate */}
                 <button
