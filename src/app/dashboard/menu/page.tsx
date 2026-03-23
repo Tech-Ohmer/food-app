@@ -1,7 +1,7 @@
 import { createClient, createServiceClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import { formatCurrency } from '@/lib/utils'
-import MenuManager from '@/components/dashboard/MenuManager'
+import type { MenuItem, MenuCategory } from '@/types'
+import DashboardMenuEditor from '@/components/dashboard/MenuEditor'
 
 export const dynamic = 'force-dynamic'
 
@@ -34,11 +34,14 @@ export default async function DashboardMenuPage() {
 
   return (
     <div className="p-6 max-w-5xl mx-auto">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Menu Management</h1>
-      <MenuManager
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Menu Management</h1>
+        <p className="text-gray-500 text-sm mt-0.5">{restaurant.name}</p>
+      </div>
+      <DashboardMenuEditor
         restaurant={restaurant}
-        categories={categories ?? []}
-        items={items ?? []}
+        categories={(categories ?? []) as MenuCategory[]}
+        items={(items ?? []) as MenuItem[]}
       />
     </div>
   )

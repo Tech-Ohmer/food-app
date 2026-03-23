@@ -1,14 +1,15 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { createClient } from '@/lib/supabase/server'
+import { createClient, createServiceClient } from '@/lib/supabase/server'
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Get restaurant for this admin
-  const { data: restaurant } = await supabase
+  // Use service client to bypass RLS — restaurant owners can see their restaurant even if deactivated
+  const serviceClient = await createServiceClient()
+  const { data: restaurant } = await serviceClient
     .from('restaurants')
     .select('id, name, slug, is_open')
     .eq('owner_email', user.email ?? '')
