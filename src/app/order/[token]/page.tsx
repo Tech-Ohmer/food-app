@@ -2,13 +2,11 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { createServiceClient } from '@/lib/supabase/server'
 import { formatDate, formatCurrency, cn } from '@/lib/utils'
-import type { OrderWithDetails, OrderStatus } from '@/types'
+import type { OrderWithDetails } from '@/types'
 import { ORDER_STATUS_LABELS, ORDER_STATUS_COLORS, ORDER_STATUS_STEPS } from '@/types'
-import dynamic from 'next/dynamic'
+import OrderTracker from '@/components/customer/OrderTracker'
 
-const LiveMap = dynamic(() => import('@/components/customer/LiveMap'), { ssr: false })
-
-export const dynamic_config = 'force-dynamic'
+export const dynamic = 'force-dynamic'
 
 export default async function OrderTrackingPage({
   params,
@@ -85,22 +83,15 @@ export default async function OrderTrackingPage({
           )}
         </div>
 
-        {/* Live Map (when rider is assigned and out for delivery) */}
-        {typedOrder.status === 'out_for_delivery' && typedOrder.riders && (
-          <div className="bg-white rounded-2xl shadow-sm overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-100">
-              <h2 className="font-semibold text-gray-800">🛵 Rider on the way!</h2>
-              <p className="text-sm text-gray-500">{typedOrder.riders.name}</p>
-            </div>
-            <div className="h-64">
-              <LiveMap
-                orderId={typedOrder.id}
-                riderId={typedOrder.rider_id ?? ''}
-                initialLat={typedOrder.riders.current_lat ?? 14.5995}
-                initialLng={typedOrder.riders.current_lng ?? 120.9842}
-              />
-            </div>
-          </div>
+        {/* Live Map (when rider is out for delivery) */}
+        {typedOrder.status === 'out_for_delivery' && typedOrder.rider_id && (
+          <OrderTracker
+            orderId={typedOrder.id}
+            riderId={typedOrder.rider_id}
+            initialLat={typedOrder.riders?.current_lat ?? null}
+            initialLng={typedOrder.riders?.current_lng ?? null}
+            deliveryAddress={typedOrder.delivery_address}
+          />
         )}
 
         {/* Order Items */}
