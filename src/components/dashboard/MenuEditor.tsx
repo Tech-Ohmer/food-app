@@ -21,18 +21,28 @@ export default function DashboardMenuEditor({
   const [newItem, setNewItem] = useState({ name: '', description: '', price: '', category_id: '', image_url: '' })
   const [editItem, setEditItem] = useState({ name: '', description: '', price: '', category_id: '', image_url: '' })
 
+  const [addError, setAddError] = useState<string | null>(null)
+
   async function handleAdd(e: React.FormEvent) {
     e.preventDefault()
-    const supabase = (await import('@/lib/supabase/client')).createClient()
-    await supabase.from('menu_items').insert({
-      restaurant_id: restaurant.id,
-      name: newItem.name,
-      description: newItem.description || null,
-      price: parseFloat(newItem.price),
-      category_id: newItem.category_id || null,
-      image_url: newItem.image_url || null,
-      is_available: true,
+    setAddError(null)
+    const res = await fetch('/api/admin/menu', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        restaurant_id: restaurant.id,
+        name: newItem.name,
+        description: newItem.description || null,
+        price: parseFloat(newItem.price),
+        category_id: newItem.category_id || null,
+        image_url: newItem.image_url || null,
+      }),
     })
+    const data = await res.json()
+    if (!res.ok) {
+      setAddError(data.error ?? 'Failed to add item.')
+      return
+    }
     setShowAdd(false)
     setNewItem({ name: '', description: '', price: '', category_id: '', image_url: '' })
     startTransition(() => router.refresh())
@@ -96,6 +106,7 @@ export default function DashboardMenuEditor({
       {showAdd && (
         <form onSubmit={handleAdd} className="bg-orange-50 border border-orange-200 rounded-2xl p-5 mb-5 space-y-3">
           <h3 className="font-bold text-gray-900">New Menu Item</h3>
+          {addError && <div className="bg-red-50 border border-red-200 text-red-700 px-3 py-2 rounded-lg text-sm">{addError}</div>}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Name *</label>
