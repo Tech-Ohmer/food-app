@@ -15,19 +15,17 @@ export default function CheckoutPage() {
   const slug = params.slug as string
 
   const [cart, setCart] = useState<CartItem[]>([])
-  const [restaurantInfo, setRestaurantInfo] = useState<{ id: string; name: string; owner_email: string } | null>(null)
+  const [restaurantInfo, setRestaurantInfo] = useState<{ restaurantId: string; restaurantName: string; restaurantOwnerEmail: string } | null>(null)
   const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', notes: '' })
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const cartKey = `cart_${slug}`
-    const infoKey = `restaurant_${slug}`
-    const savedCart = localStorage.getItem(cartKey)
-    const savedInfo = localStorage.getItem(infoKey)
+    const savedCart = localStorage.getItem('ohmer-eats-cart')
+    const savedInfo = localStorage.getItem('ohmer-eats-restaurant')
     if (savedCart) setCart(JSON.parse(savedCart))
     if (savedInfo) setRestaurantInfo(JSON.parse(savedInfo))
-  }, [slug])
+  }, [])
 
   const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
   const total = subtotal + DELIVERY_FEE
@@ -39,9 +37,9 @@ export default function CheckoutPage() {
     setError(null)
 
     const result = await placeOrder({
-      restaurant_id: restaurantInfo.id,
-      restaurant_owner_email: restaurantInfo.owner_email,
-      restaurant_name: restaurantInfo.name,
+      restaurant_id: restaurantInfo.restaurantId,
+      restaurant_owner_email: restaurantInfo.restaurantOwnerEmail,
+      restaurant_name: restaurantInfo.restaurantName,
       customer_name: form.name,
       customer_email: form.email,
       customer_phone: form.phone,
@@ -57,7 +55,8 @@ export default function CheckoutPage() {
     }
 
     // Clear cart
-    localStorage.removeItem(`cart_${slug}`)
+    localStorage.removeItem('ohmer-eats-cart')
+    localStorage.removeItem('ohmer-eats-restaurant')
     router.push(`/order/${result.trackingToken}`)
   }
 
