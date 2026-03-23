@@ -5,6 +5,100 @@ import { useRouter } from 'next/navigation'
 import type { Restaurant, MenuCategory, MenuItem } from '@/types'
 import { formatCurrency } from '@/lib/utils'
 
+// Image picker component
+function ImagePicker({ value, onChange }: { value: string; onChange: (url: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const [query, setQuery] = useState('')
+  const [images, setImages] = useState<{ url: string; thumb: string; alt: string }[]>([])
+  const [searching, setSearching] = useState(false)
+
+  async function handleSearch(q: string) {
+    if (!q.trim()) return
+    setSearching(true)
+    try {
+      const res = await fetch(`/api/search-images?q=${encodeURIComponent(q)}`)
+      const data = await res.json()
+      setImages(data.images ?? [])
+    } catch {
+      setImages([])
+    }
+    setSearching(false)
+  }
+
+  function selectImage(url: string) {
+    onChange(url)
+    setOpen(false)
+    setImages([])
+    setQuery('')
+  }
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="text-xs text-blue-600 hover:underline mt-1"
+      >
+        🔍 Search for image online
+      </button>
+    )
+  }
+
+  return (
+    <div className="mt-2 bg-blue-50 border border-blue-200 rounded-xl p-4 space-y-3">
+      <div className="flex gap-2">
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && handleSearch(query)}
+          placeholder="Search food image (e.g. burger, pizza)..."
+          className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+        />
+        <button
+          type="button"
+          onClick={() => handleSearch(query)}
+          disabled={searching}
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-60"
+        >
+          {searching ? '...' : 'Search'}
+        </button>
+        <button
+          type="button"
+          onClick={() => setOpen(false)}
+          className="border border-gray-200 text-gray-500 px-3 py-2 rounded-lg text-sm hover:bg-gray-50"
+        >
+          ✕
+        </button>
+      </div>
+
+      {images.length > 0 && (
+        <div>
+          <p className="text-xs text-gray-500 mb-2">Click to use — free images from Unsplash</p>
+          <div className="grid grid-cols-3 gap-2">
+            {images.map((img, i) => (
+              <button
+                key={i}
+                type="button"
+                onClick={() => selectImage(img.url)}
+                className="rounded-lg overflow-hidden border-2 border-transparent hover:border-blue-500 transition-all"
+              >
+                <img
+                  src={img.thumb}
+                  alt={img.alt}
+                  className="w-full h-20 object-cover"
+                  onError={(e) => { (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=200&h=150&fit=crop' }}
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {searching && <p className="text-sm text-gray-400 text-center">Searching...</p>}
+    </div>
+  )
+}
+
 export default function DashboardMenuEditor({
   restaurant,
   categories,
@@ -130,6 +224,7 @@ export default function DashboardMenuEditor({
               <label className="block text-xs font-medium text-gray-600 mb-1">Image URL</label>
               <input value={newItem.image_url} onChange={e => setNewItem({...newItem, image_url: e.target.value})}
                 placeholder="https://..." className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+              <ImagePicker value={newItem.image_url} onChange={url => setNewItem({...newItem, image_url: url})} />
             </div>
             <div className="sm:col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
@@ -180,6 +275,7 @@ export default function DashboardMenuEditor({
                       <label className="block text-xs text-gray-500 mb-1">Image URL</label>
                       <input value={editItem.image_url} onChange={e => setEditItem({...editItem, image_url: e.target.value})}
                         placeholder="https://..." className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                      <ImagePicker value={editItem.image_url} onChange={url => setEditItem({...editItem, image_url: url})} />
                     </div>
                     <div className="sm:col-span-2">
                       <label className="block text-xs text-gray-500 mb-1">Description</label>
