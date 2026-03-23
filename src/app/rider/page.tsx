@@ -122,7 +122,7 @@ export default function RiderPage() {
             <p className="text-lg font-medium">No active delivery</p>
             <p className="text-sm mt-1">You will be assigned orders by the admin.</p>
           </div>
-        ) : (
+        ) : !delivered && currentOrder ? (
           <>
             {/* Current order */}
             <div className="bg-white rounded-2xl shadow-sm p-6">
@@ -192,7 +192,7 @@ export default function RiderPage() {
               {delivering ? 'Marking as delivered...' : '✓ Mark as Delivered'}
             </button>
           </>
-        )}
+        ) : null}
       </div>
     </div>
   )

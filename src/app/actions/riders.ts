@@ -69,19 +69,15 @@ export async function markOrderDelivered(
     }
 
     // Send delivery confirmation email (non-blocking)
-    supabase
-      .from('orders')
-      .select('*')
-      .eq('id', orderId)
-      .single()
-      .then(async ({ data: order }) => {
-        if (order) {
-          const { sendOrderStatusUpdateEmail } = await import('@/lib/email')
-          const { ORDER_STATUS_LABELS } = await import('@/types')
-          sendOrderStatusUpdateEmail(order as any, ORDER_STATUS_LABELS['delivered']).catch(console.error)
-        }
-      })
-      .catch(console.error)
+    void Promise.resolve(
+      supabase.from('orders').select('*').eq('id', orderId).single()
+    ).then(async ({ data: order }) => {
+      if (order) {
+        const { sendOrderStatusUpdateEmail } = await import('@/lib/email')
+        const { ORDER_STATUS_LABELS } = await import('@/types')
+        sendOrderStatusUpdateEmail(order as any, ORDER_STATUS_LABELS['delivered']).catch(console.error)
+      }
+    }).catch(console.error)
 
     return { success: true }
   } catch (err: any) {

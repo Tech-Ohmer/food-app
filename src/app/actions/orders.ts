@@ -95,17 +95,13 @@ export async function updateOrderStatus(
     }
 
     // Step 2: Fetch order separately for email (non-blocking)
-    supabase
-      .from('orders')
-      .select('*')
-      .eq('id', orderId)
-      .single()
-      .then(({ data: order }) => {
-        if (order) {
-          sendOrderStatusUpdateEmail(order as any, ORDER_STATUS_LABELS[status]).catch(console.error)
-        }
-      })
-      .catch(console.error)
+    void Promise.resolve(
+      supabase.from('orders').select('*').eq('id', orderId).single()
+    ).then(({ data: order }) => {
+      if (order) {
+        sendOrderStatusUpdateEmail(order as any, ORDER_STATUS_LABELS[status]).catch(console.error)
+      }
+    }).catch(console.error)
 
     return { success: true }
   } catch (err: any) {
