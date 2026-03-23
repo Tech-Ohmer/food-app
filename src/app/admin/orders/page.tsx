@@ -66,8 +66,8 @@ function OrderRow({ order, compact = false }: { order: any; compact?: boolean })
             >
               {order.order_number}
             </Link>
-            <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', ORDER_STATUS_COLORS[order.status])}>
-              {ORDER_STATUS_LABELS[order.status]}
+            <span className={cn('text-xs px-2 py-0.5 rounded-full font-medium', ORDER_STATUS_COLORS[order.status as keyof typeof ORDER_STATUS_COLORS])}>
+              {ORDER_STATUS_LABELS[order.status as keyof typeof ORDER_STATUS_LABELS]}
             </span>
           </div>
           {!compact && (
