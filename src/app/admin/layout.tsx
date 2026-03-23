@@ -30,6 +30,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <span className="font-bold text-lg">🍔 OhmerEats Admin</span>
           <div className="flex gap-1">
             <Link href="/admin" className="px-3 py-1.5 text-sm rounded-lg hover:bg-gray-700 transition-colors">Overview</Link>
+            <Link href="/admin/orders" className="px-3 py-1.5 text-sm rounded-lg hover:bg-gray-700 transition-colors">Orders</Link>
             <Link href="/admin/restaurants" className="px-3 py-1.5 text-sm rounded-lg hover:bg-gray-700 transition-colors">Restaurants</Link>
             <Link href="/admin/riders" className="px-3 py-1.5 text-sm rounded-lg hover:bg-gray-700 transition-colors">Riders</Link>
           </div>

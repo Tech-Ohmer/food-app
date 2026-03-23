@@ -11,7 +11,7 @@ export default async function AdminPage() {
 
   const [{ data: restaurants }, { data: orders }, { data: riders }] = await Promise.all([
     supabase.from('restaurants').select('*').order('name'),
-    supabase.from('orders').select('*, restaurants(name)').order('created_at', { ascending: false }).limit(20),
+    supabase.from('orders').select('*, restaurants(name, slug)').order('created_at', { ascending: false }).limit(20),
     supabase.from('riders').select('*').order('name'),
   ])
 
@@ -25,8 +25,8 @@ export default async function AdminPage() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <StatCard label="Restaurants" value={restaurants?.length ?? 0} icon="🍽️" href="/admin/restaurants" />
         <StatCard label="Riders" value={riders?.length ?? 0} icon="🛵" href="/admin/riders" />
-        <StatCard label="Active Orders" value={activeOrders.length} icon="📋" />
-        <StatCard label="Total Orders" value={orders?.length ?? 0} icon="✅" />
+        <StatCard label="Active Orders" value={activeOrders.length} icon="📋" href="/admin/orders" />
+        <StatCard label="Total Orders" value={orders?.length ?? 0} icon="✅" href="/admin/orders" />
       </div>
 
       {/* Recent orders */}
@@ -51,8 +51,12 @@ export default async function AdminPage() {
               </thead>
               <tbody>
                 {orders?.map((order: any) => (
-                  <tr key={order.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-3 px-3 font-mono text-xs text-gray-500">{order.order_number}</td>
+                  <tr key={order.id} className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer group">
+                    <td className="py-3 px-3 font-mono text-xs">
+                      <Link href={`/order/${order.tracking_token}`} target="_blank" className="text-orange-500 hover:underline">
+                        {order.order_number}
+                      </Link>
+                    </td>
                     <td className="py-3 px-3 text-gray-700 hidden md:table-cell">{order.restaurants?.name}</td>
                     <td className="py-3 px-3">
                       <div className="font-medium text-gray-900">{order.customer_name}</div>
