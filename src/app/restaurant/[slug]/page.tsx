@@ -4,6 +4,7 @@ import { createServiceClient } from '@/lib/supabase/server'
 import { formatCurrency } from '@/lib/utils'
 import type { Restaurant, MenuItem, MenuCategory } from '@/types'
 import CartSidebar from '@/components/customer/CartSidebar'
+import AddToCartButton from '@/components/customer/AddToCartButton'
 
 export default async function RestaurantPage({
   params,
@@ -87,7 +88,7 @@ export default async function RestaurantPage({
       </div>
 
       {/* Content */}
-      <div className="max-w-5xl mx-auto px-4 py-6 flex gap-6">
+      <div className="max-w-5xl mx-auto px-4 py-6 flex flex-col lg:flex-row gap-6">
         {/* Menu */}
         <div className="flex-1">
           {typedRestaurant.description && (
@@ -130,14 +131,16 @@ export default async function RestaurantPage({
           )}
         </div>
 
-        {/* Cart Sidebar */}
-        <CartSidebar
-          restaurantId={typedRestaurant.id}
-          restaurantName={typedRestaurant.name}
-          restaurantOwnerEmail={typedRestaurant.owner_email}
-          restaurantSlug={typedRestaurant.slug}
-          isOpen={typedRestaurant.is_open}
-        />
+        {/* Cart Sidebar — shows on all screen sizes */}
+        <div className="lg:w-80 lg:shrink-0">
+          <CartSidebar
+            restaurantId={typedRestaurant.id}
+            restaurantName={typedRestaurant.name}
+            restaurantOwnerEmail={typedRestaurant.owner_email}
+            restaurantSlug={typedRestaurant.slug}
+            isOpen={typedRestaurant.is_open}
+          />
+        </div>
       </div>
     </div>
   )
@@ -145,10 +148,7 @@ export default async function RestaurantPage({
 
 function MenuItemCard({ item, restaurantOpen }: { item: MenuItem; restaurantOpen: boolean }) {
   return (
-    <div
-      className="bg-white rounded-xl border border-gray-100 p-4 flex gap-4 hover:border-orange-200 transition-colors"
-      data-item={JSON.stringify({ id: item.id, name: item.name, price: item.price })}
-    >
+    <div className="bg-white rounded-xl border border-gray-100 p-4 flex gap-4 hover:border-orange-200 transition-colors">
       {item.image_url && (
         <img src={item.image_url} alt={item.name} className="w-20 h-20 rounded-lg object-cover shrink-0" />
       )}
@@ -160,14 +160,11 @@ function MenuItemCard({ item, restaurantOpen }: { item: MenuItem; restaurantOpen
         <div className="flex items-center justify-between mt-2">
           <span className="font-bold text-orange-500">{formatCurrency(item.price)}</span>
           {restaurantOpen && (
-            <button
-              className="add-to-cart-btn text-xs bg-orange-500 hover:bg-orange-600 text-white px-3 py-1.5 rounded-lg transition-colors"
-              data-item-id={item.id}
-              data-item-name={item.name}
-              data-item-price={item.price}
-            >
-              + Add
-            </button>
+            <AddToCartButton
+              menuItemId={item.id}
+              name={item.name}
+              price={item.price}
+            />
           )}
         </div>
       </div>
