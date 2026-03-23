@@ -1,5 +1,13 @@
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+
+function getAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
 
 export async function POST(request: Request) {
   try {
@@ -10,7 +18,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Name, address and owner email are required.' }, { status: 400 })
     }
 
-    const supabase = await createServiceClient()
+    const supabase = getAdminClient()
 
     const { error } = await supabase.from('restaurants').insert({
       name,
