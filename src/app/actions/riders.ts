@@ -1,6 +1,14 @@
 'use server'
 
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
+
+function getAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
 
 export async function createRider(data: {
   name: string
@@ -9,7 +17,7 @@ export async function createRider(data: {
   password: string
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = await createServiceClient()
+    const supabase = getAdminClient()
     const { data: authUser, error: authError } = await supabase.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -35,7 +43,7 @@ export async function updateRiderLocation(
   lng: number
 ): Promise<{ success: boolean }> {
   try {
-    const supabase = await createServiceClient()
+    const supabase = getAdminClient()
     const { error } = await supabase
       .from('riders')
       .update({
@@ -56,7 +64,7 @@ export async function markOrderDelivered(
   orderId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = await createServiceClient()
+    const supabase = getAdminClient()
 
     const { error: updateError } = await supabase
       .from('orders')

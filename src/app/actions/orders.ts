@@ -1,12 +1,20 @@
 'use server'
 
 import { nanoid } from 'nanoid'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createClient } from '@supabase/supabase-js'
 import { sendOrderConfirmationEmail, sendRestaurantNewOrderEmail, sendOrderStatusUpdateEmail } from '@/lib/email'
 import type { CartItem, OrderStatus } from '@/types'
 import { ORDER_STATUS_LABELS } from '@/types'
 
 const DELIVERY_FEE = parseFloat(process.env.DELIVERY_FEE ?? '50')
+
+function getAdminClient() {
+  return createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  )
+}
 
 export async function placeOrder(data: {
   restaurant_id: string
@@ -20,7 +28,7 @@ export async function placeOrder(data: {
   items: CartItem[]
 }): Promise<{ success: boolean; trackingToken?: string; error?: string }> {
   try {
-    const supabase = await createServiceClient()
+    const supabase = getAdminClient()
     const tracking_token = nanoid(16)
     const subtotal = data.items.reduce((sum, item) => sum + item.price * item.quantity, 0)
     const total = subtotal + DELIVERY_FEE
@@ -81,7 +89,7 @@ export async function updateOrderStatus(
   status: OrderStatus
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = await createServiceClient()
+    const supabase = getAdminClient()
 
     // Step 1: Update the status
     const { error: updateError } = await supabase
@@ -115,7 +123,7 @@ export async function assignRider(
   riderId: string
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const supabase = await createServiceClient()
+    const supabase = getAdminClient()
     const { error } = await supabase
       .from('orders')
       .update({ rider_id: riderId, status: 'out_for_delivery' })
