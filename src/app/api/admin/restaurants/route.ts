@@ -9,6 +9,20 @@ function getAdminClient() {
   )
 }
 
+export async function GET() {
+  try {
+    const supabase = getAdminClient()
+    const { data, error } = await supabase
+      .from('restaurants')
+      .select('*')
+      .order('name')
+    if (error) return NextResponse.json([], { status: 200 })
+    return NextResponse.json(data)
+  } catch {
+    return NextResponse.json([], { status: 200 })
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json()
