@@ -83,22 +83,34 @@ export async function updateOrderStatus(
   try {
     const supabase = await createServiceClient()
 
-    const { data: order, error } = await supabase
+    // Step 1: Update the status
+    const { error: updateError } = await supabase
       .from('orders')
-      .update({ status })
+      .update({ status, updated_at: new Date().toISOString() })
       .eq('id', orderId)
-      .select()
+
+    if (updateError) {
+      console.error('updateOrderStatus DB error:', updateError)
+      return { success: false, error: updateError.message }
+    }
+
+    // Step 2: Fetch order separately for email (non-blocking)
+    supabase
+      .from('orders')
+      .select('*')
+      .eq('id', orderId)
       .single()
-
-    if (error || !order) throw error
-
-    // Send status update email
-    sendOrderStatusUpdateEmail(order as any, ORDER_STATUS_LABELS[status]).catch(console.error)
+      .then(({ data: order }) => {
+        if (order) {
+          sendOrderStatusUpdateEmail(order as any, ORDER_STATUS_LABELS[status]).catch(console.error)
+        }
+      })
+      .catch(console.error)
 
     return { success: true }
-  } catch (err) {
+  } catch (err: any) {
     console.error('updateOrderStatus error:', err)
-    return { success: false, error: 'Failed to update order status.' }
+    return { success: false, error: err?.message ?? 'Failed to update order status.' }
   }
 }
 
