@@ -85,3 +85,73 @@ export async function sendOrderStatusUpdateEmail(order: Order, statusLabel: stri
     </div>`
   )
 }
+
+export async function sendRiderClaimedEmail(order: Order, riderName: string) {
+  const trackingUrl = `${APP_URL}/order/${order.tracking_token}`
+  await sendEmail(
+    order.customer_email,
+    `[${order.order_number}] Rider assigned to your order`,
+    `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <h2 style="color:#f97316">Rider Assigned!</h2>
+      <p>Hi ${order.customer_name},</p>
+      <p><strong>${riderName}</strong> will be picking up your order <strong>${order.order_number}</strong> soon.</p>
+      <a href="${trackingUrl}" style="display:inline-block;background:#f97316;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">Track My Order</a>
+    </div>`
+  )
+}
+
+export async function sendRemittanceNotification(data: {
+  restaurantEmail: string
+  restaurantName: string
+  amount: number
+  remitType: 'partial' | 'full'
+  totalRemitted: number
+  totalDue: number
+}) {
+  const remaining = data.totalDue - data.totalRemitted
+  await sendEmail(
+    data.restaurantEmail,
+    `[OhmerEats] ${data.remitType === 'full' ? 'Full' : 'Partial'} remittance received — ₱${data.amount.toFixed(2)}`,
+    `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+      <h2 style="color:#f97316">Remittance ${data.remitType === 'full' ? 'Complete ✓' : 'Received (Partial)'}</h2>
+      <p>Hi ${data.restaurantName},</p>
+      <table style="border-collapse:collapse;width:100%;margin:16px 0">
+        <tr><td style="padding:8px;background:#f5f5f5;font-weight:bold">Amount Received</td><td style="padding:8px">₱${data.amount.toFixed(2)}</td></tr>
+        <tr><td style="padding:8px;background:#f5f5f5;font-weight:bold">Total Remitted</td><td style="padding:8px">₱${data.totalRemitted.toFixed(2)}</td></tr>
+        <tr><td style="padding:8px;background:#f5f5f5;font-weight:bold">Total Due</td><td style="padding:8px">₱${data.totalDue.toFixed(2)}</td></tr>
+        ${remaining > 0 ? `<tr><td style="padding:8px;background:#fff3cd;font-weight:bold">Balance Remaining</td><td style="padding:8px">₱${remaining.toFixed(2)}</td></tr>` : ''}
+      </table>
+      ${data.remitType === 'full' ? '<p style="color:green;font-weight:bold">✓ Fully settled.</p>' : `<p>Rider still owes ₱${remaining.toFixed(2)}.</p>`}
+      <a href="${APP_URL}/dashboard" style="display:inline-block;background:#f97316;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">View Dashboard</a>
+    </div>`
+  )
+}
+
+export async function sendOverdueRemittanceAlert(data: {
+  restaurantEmail: string
+  restaurantName: string
+  adminEmail: string
+  riderName: string
+  orderNumber: string
+  amountDue: number
+  amountRemitted: number
+  daysOverdue: number
+}) {
+  const balance = data.amountDue - data.amountRemitted
+  const subject = `⚠️ OVERDUE — ${data.orderNumber} — ${data.daysOverdue} days overdue`
+  const html = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto">
+    <h2 style="color:#dc3545">⚠️ Overdue Remittance Alert</h2>
+    <p>Overdue by <strong>${data.daysOverdue} days</strong>:</p>
+    <table style="border-collapse:collapse;width:100%;margin:16px 0">
+      <tr><td style="padding:8px;background:#f5f5f5;font-weight:bold">Order</td><td style="padding:8px">${data.orderNumber}</td></tr>
+      <tr><td style="padding:8px;background:#f5f5f5;font-weight:bold">Rider</td><td style="padding:8px">${data.riderName}</td></tr>
+      <tr><td style="padding:8px;background:#f5f5f5;font-weight:bold">Amount Due</td><td style="padding:8px">₱${data.amountDue.toFixed(2)}</td></tr>
+      <tr><td style="padding:8px;background:#fff3cd;font-weight:bold">Balance Owed</td><td style="padding:8px">₱${balance.toFixed(2)}</td></tr>
+    </table>
+    <a href="${APP_URL}/admin/orders" style="display:inline-block;background:#dc3545;color:white;padding:12px 24px;border-radius:6px;text-decoration:none;font-weight:bold">View in Admin</a>
+  </div>`
+  await sendEmail(data.restaurantEmail, subject, html)
+  if (data.adminEmail && data.adminEmail !== data.restaurantEmail) {
+    await sendEmail(data.adminEmail, subject, html)
+  }
+}

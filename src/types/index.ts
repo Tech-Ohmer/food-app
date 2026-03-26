@@ -8,9 +8,14 @@ export type OrderStatus =
   | 'rejected'
   | 'preparing'
   | 'ready_for_pickup'
+  | 'rider_claimed'
   | 'out_for_delivery'
   | 'delivered'
   | 'cancelled'
+
+export type RemitStatus = 'pending' | 'partial' | 'full' | 'overdue'
+
+export type RemittanceRule = 'per_delivery' | 'daily' | 'weekly' | 'custom'
 
 export interface Restaurant {
   id: string
@@ -24,6 +29,8 @@ export interface Restaurant {
   cover_url: string | null
   is_open: boolean
   is_active: boolean
+  remittance_rule: RemittanceRule
+  remittance_days: number
   created_at: string
   updated_at: string
 }
@@ -82,8 +89,25 @@ export interface Order {
   delivery_fee: number
   total: number
   tracking_token: string
+  // Remittance fields (v3.0)
+  rider_earnings: number | null
+  restaurant_amount: number | null
+  remit_status: RemitStatus
+  amount_remitted: number
+  remit_due_date: string | null
+  remit_notes: string | null
   created_at: string
   updated_at: string
+}
+
+export interface RemittanceLog {
+  id: string
+  order_id: string
+  rider_id: string | null
+  amount: number
+  remit_type: 'partial' | 'full'
+  notes: string | null
+  created_at: string
 }
 
 export interface OrderItem {
@@ -120,6 +144,7 @@ export const ORDER_STATUS_LABELS: Record<OrderStatus, string> = {
   rejected: 'Rejected',
   preparing: 'Preparing',
   ready_for_pickup: 'Ready for Pickup',
+  rider_claimed: 'Rider Assigned',
   out_for_delivery: 'Out for Delivery',
   delivered: 'Delivered',
   cancelled: 'Cancelled',
@@ -131,6 +156,7 @@ export const ORDER_STATUS_COLORS: Record<OrderStatus, string> = {
   rejected: 'bg-red-100 text-red-800',
   preparing: 'bg-orange-100 text-orange-800',
   ready_for_pickup: 'bg-purple-100 text-purple-800',
+  rider_claimed: 'bg-teal-100 text-teal-800',
   out_for_delivery: 'bg-indigo-100 text-indigo-800',
   delivered: 'bg-green-100 text-green-800',
   cancelled: 'bg-gray-100 text-gray-800',
@@ -141,6 +167,28 @@ export const ORDER_STATUS_STEPS: OrderStatus[] = [
   'accepted',
   'preparing',
   'ready_for_pickup',
+  'rider_claimed',
   'out_for_delivery',
   'delivered',
 ]
+
+export const REMIT_STATUS_LABELS: Record<RemitStatus, string> = {
+  pending: 'Not Yet Remitted',
+  partial: 'Partially Remitted',
+  full: 'Fully Remitted',
+  overdue: 'OVERDUE',
+}
+
+export const REMIT_STATUS_COLORS: Record<RemitStatus, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  partial: 'bg-blue-100 text-blue-800',
+  full: 'bg-green-100 text-green-800',
+  overdue: 'bg-red-100 text-red-800',
+}
+
+export const REMITTANCE_RULE_LABELS: Record<RemittanceRule, string> = {
+  per_delivery: 'Per Delivery (remit after each order)',
+  daily: 'Daily (remit by end of day)',
+  weekly: 'Weekly (remit by end of week)',
+  custom: 'Custom (set number of days)',
+}

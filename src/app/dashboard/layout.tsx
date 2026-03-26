@@ -42,6 +42,9 @@ export default async function DashboardLayout({ children }: { children: React.Re
             <Link href="/dashboard/menu" className="px-3 py-1.5 text-sm rounded-lg hover:bg-orange-400 transition-colors">
               Menu
             </Link>
+            <Link href="/dashboard/remittances" className="px-3 py-1.5 text-sm rounded-lg hover:bg-orange-400 transition-colors">
+              💰 Remittances
+            </Link>
           </div>
         </div>
         <div className="flex items-center gap-3">
